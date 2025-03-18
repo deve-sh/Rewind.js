@@ -1,7 +1,9 @@
 const responseHandler = (resp: Response) => {
-	if (resp.status === 401) return { error: true, canSendMoreAPICalls: false }; // No further API Calls
+	if (resp.status === 401) return { error: true }; // No further API Calls
 
-	return { error: null, canSendMoreAPICalls: true };
+	if (!resp.ok) return { error: true };
+
+	return { error: null };
 };
 
 const call = async (
@@ -19,7 +21,7 @@ const call = async (
 		});
 		return responseHandler(resp);
 	} catch (error) {
-		return { error, canSendMoreAPICalls: true };
+		return { error };
 	}
 };
 
