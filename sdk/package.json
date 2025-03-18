@@ -1,0 +1,21 @@
+{
+	"name": "rewind.js",
+	"version": "0.0.1",
+	"description": "Rewind your user sessions to understand their workflows better",
+	"main": "index.js",
+	"scripts": {
+		"compile": "tsup",
+		"test": ""
+	},
+	"keywords": [
+		"Session Replay",
+		"Rewind"
+	],
+	"author": "Devesh Kumar<contact@devesh.tech>",
+	"license": "MIT",
+	"devDependencies": {
+		"tsup": "^8.4.0",
+		"typescript": "^5.8.2",
+		"vitest": "^3.0.9"
+	}
+}
