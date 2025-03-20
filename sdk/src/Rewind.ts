@@ -46,6 +46,23 @@ class RewindJS {
 		// TODO: Remove events flush to server
 	}
 
+	private sendScaffoldingInformation() {
+		// Get initial scaffolding of the page using the following:
+		// - Entire HTML of the page
+		// - All link-based stylesheets of the page
+
+		// Setup listeners for the following
+		// - Mutation observers for changes to stylesheets and HTML elements
+		// - Mousemove events to track user cursor
+
+		const htmlOnThePage = document.body.getHTML();
+
+		let stylesheetsFromHeadTag = [];
+
+		const linkTags = document.head.getElementsByTagName("link");
+		for (let i = 0; i < linkTags.length; i++) {}
+	}
+
 	private async flushEventsToServer() {
 		if (!this.canSendMoreAPICalls) return;
 
