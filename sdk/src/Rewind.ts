@@ -1,18 +1,32 @@
+import { v4 } from "uuid";
+
 import { getSessionId } from "./utils/session";
 
-import type { UserEvent } from "./types";
+import { getQueue, pushToQueue } from "./utils/events-queue";
+
 import call from "./utils/call";
+import getElementPath from "./utils/get-element-path";
+
+import type { DOMMutationEvent, UserEvent } from "./types";
 
 class RewindJS {
-	private isRecording = false;
 	private canSendMoreAPICalls = true;
 
 	private apiKey: string = "";
 	private baseURL: string = process.env.SERVER_BASE_URL || "";
 
+	public userProperties: {
+		email?: string;
+		name?: string;
+		uid?: string;
+	} | null = null;
+
 	private sessionId: string;
 
-	private eventsQueue: UserEvent[] = [];
+	private mutationObservers: MutationObserver[] = [];
+	private eventListeners: { event: string; listener: (args: any) => any }[] =
+		[];
+	private intervals: number[] = [];
 
 	constructor(initOptions: { baseURL?: string; apiKey: string }) {
 		this.sessionId = getSessionId();
@@ -24,55 +38,168 @@ class RewindJS {
 		if (initOptions.apiKey) this.apiKey = initOptions.apiKey;
 	}
 
-	public setUserProperties(properties: {
-		email?: string;
-		uid: string;
-		name: string;
-		metadata?: Record<string, any>;
-	}) {}
+	public setUserProperties(properties: (typeof this)["userProperties"]) {
+		if (!properties) return (this.userProperties = { uid: v4() });
+
+		if (!properties.email && !properties.name && !properties.uid)
+			throw new Error(
+				"Incorrect use of RewindJS.setUserProperties: any one of name, email, uid is mandatory"
+			);
+
+		this.userProperties = properties;
+	}
 
 	public startRecording() {
-		this.isRecording = true;
 		this.canSendMoreAPICalls = true;
 
-		// TODO: Add Event listeners for DOM Mutations and Initial States
-		// TODO: Add events flush to server
+		this.setupInitialHTML();
+		this.listenToDOMMutationsAndInputs();
 	}
 
 	public pauseRecording() {
-		this.isRecording = false;
-
-		// TODO: Remove Event listeners for DOM Mutations and Initial States
-		// TODO: Remove events flush to server
+		this.unregisterListeners();
 	}
 
-	private sendScaffoldingInformation() {
-		// Get initial scaffolding of the page using the following:
-		// - Entire HTML of the page
-		// - All link-based stylesheets of the page
+	private setupInitialHTML() {
+		const docClone = document.cloneNode(true) as Node & Document;
 
-		// Setup listeners for the following
-		// - Mutation observers for changes to stylesheets and HTML elements
-		// - Mousemove events to track user cursor
+		docClone.querySelectorAll("script").forEach((el) => el.remove());
+		docClone
+			.querySelectorAll("head > *:not(link)")
+			.forEach((el) => el.remove());
 
-		const htmlOnThePage = document.body.getHTML();
+		const initialScaffoldedHtml = `<!DOCTYPE html><html>${docClone.documentElement.innerHTML}</html>`;
 
-		let stylesheetsFromHeadTag = [];
+		pushToQueue({
+			type: "scaffolding",
+			time: Date.now(),
+			html: initialScaffoldedHtml,
+		});
+	}
 
-		const linkTags = document.head.getElementsByTagName("link");
-		for (let i = 0; i < linkTags.length; i++) {}
+	private listenToDOMMutationsAndInputs() {
+		const headTarget = document.head;
+		const bodyTarget = document.body;
+
+		function serializeMutation(mutation: MutationRecord) {
+			return {
+				type: "mutation" as DOMMutationEvent["type"],
+				subType: mutation.type as DOMMutationEvent["subType"],
+				time: Date.now(),
+				target: getElementPath(mutation.target as Node & Element),
+				attributeName: mutation.attributeName || null,
+				oldValue: mutation.oldValue || null,
+				newValue:
+					mutation.target.nodeValue || mutation.target.textContent || null,
+				addedNodes: [...mutation.addedNodes].map(
+					(node) => (node as Element).outerHTML || node.nodeValue
+				),
+				removedNodes: [...mutation.removedNodes].map(
+					(node) => (node as Element).outerHTML || node.nodeValue
+				),
+			};
+		}
+
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => pushToQueue(serializeMutation(mutation)));
+		});
+
+		observer.observe(headTarget, {
+			subtree: false,
+			childList: true,
+			attributes: true,
+			characterData: true,
+		});
+
+		observer.observe(bodyTarget, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			characterData: true,
+		});
+
+		function inputsEventListener(event: Event) {
+			const target = event.target as EventTarget as Element;
+
+			if (!target) return;
+
+			if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+				pushToQueue({
+					type: "input",
+					target: getElementPath(target),
+					time: Date.now(),
+					// @ts-ignore Can't get InputElement or TextAreaElement interfaces for some reason
+					newValue: target.value,
+				});
+			}
+		}
+
+		let lastMouseMoveEvent: UserEvent | null = null;
+		let throttlingMouseMoveEvents = false;
+
+		function onMouseMove(event: MouseEvent) {
+			lastMouseMoveEvent = {
+				type: "mousemove",
+				time: Date.now(),
+				x: event.clientX,
+				y: event.clientY,
+			};
+
+			if (!throttlingMouseMoveEvents) {
+				throttlingMouseMoveEvents = true;
+
+				setTimeout(() => {
+					if (lastMouseMoveEvent) pushToQueue(lastMouseMoveEvent);
+					throttlingMouseMoveEvents = false;
+				}, 100);
+			}
+		}
+
+		function onMouseClick(event: MouseEvent) {
+			pushToQueue({
+				type: "mouseclick",
+				time: Date.now(),
+				x: event.clientX,
+				y: event.clientY,
+			});
+		}
+
+		document.addEventListener("mousemove", onMouseMove);
+		document.addEventListener("click", onMouseClick);
+		document.addEventListener("input", inputsEventListener);
+
+		this.intervals.push(window.setInterval(this.flushEventsToServer, 3500));
+		this.mutationObservers.push(observer);
+		this.eventListeners.push({ event: "input", listener: inputsEventListener });
+		this.eventListeners.push({ event: "click", listener: onMouseClick });
+		this.eventListeners.push({ event: "mousemove", listener: onMouseMove });
+	}
+
+	private unregisterListeners() {
+		if (this.mutationObservers.length)
+			this.mutationObservers.forEach((observer) => observer.disconnect());
+
+		if (this.eventListeners.length)
+			this.eventListeners.forEach((listenerRegistration) =>
+				document.removeEventListener(
+					listenerRegistration.event,
+					listenerRegistration.listener
+				)
+			);
+
+		if (this.intervals)
+			this.intervals.forEach((interval) => window.clearInterval(interval));
 	}
 
 	private async flushEventsToServer() {
 		if (!this.canSendMoreAPICalls) return;
 
-		if (!this.eventsQueue.length) return;
-
-		const backupEventsQueue = this.eventsQueue;
+		if (!getQueue().length) return;
 
 		const constructedRequestBody = {
-			events: JSON.stringify(this.eventsQueue),
+			events: JSON.stringify(getQueue()),
 			sessionId: this.sessionId,
+			user: this.userProperties,
 		};
 		const headers = {
 			"x-api-key": this.apiKey,
