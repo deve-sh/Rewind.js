@@ -12,6 +12,12 @@ fastify.get("/", async function handler() {
 
 const PORT = Number(process.env.PORT || 3210);
 
+import eventsRoutes from "./routers/events";
+import sessionsRoutes from "./routers/sessions";
+
+fastify.register(sessionsRoutes, { prefix: "/sessions" });
+fastify.register(eventsRoutes, { prefix: "/routes" });
+
 fastify
 	.listen({ port: PORT })
 	.then(() => console.log("Server listening on port", PORT))

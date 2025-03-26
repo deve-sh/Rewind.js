@@ -26,6 +26,9 @@ class MemoryAdaptor implements DBAdaptor {
 	} {}
 
 	// @ts-expect-error To be implemented
+	ingestSessionChunks() {}
+
+	// @ts-expect-error To be implemented
 	deleteSession(id: string): {
 		error: Error | unknown;
 		result: { deleted: boolean };
@@ -41,8 +44,9 @@ class MemoryAdaptor implements DBAdaptor {
 	// @ts-expect-error To be implemented
 	generateAPIKey() {}
 
-	// @ts-expect-error To be implemented
-	validateAPIKey() {}
+	async validateAPIKey(key: string) {
+		return { result: true, error: null };
+	}
 }
 
 export default MemoryAdaptor;

@@ -12,6 +12,9 @@ class PostgresAdaptor implements DBAdaptor {
 	} {}
 
 	// @ts-expect-error To be implemented
+	ingestSessionChunks() {}
+
+	// @ts-expect-error To be implemented
 	getSessions(filters: Record<string, any>): {
 		error: Error | unknown;
 		result: {
@@ -42,7 +45,9 @@ class PostgresAdaptor implements DBAdaptor {
 	generateAPIKey() {}
 
 	// @ts-expect-error To be implemented
-	validateAPIKey() {}
+	validateAPIKey() {
+		return { result: true, error: null };
+	}
 }
 
 export default PostgresAdaptor;

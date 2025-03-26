@@ -38,7 +38,7 @@ export interface DBAdaptor {
 		sessionId: string
 	) => AdaptorMethodResponse<boolean>;
 
-	generateAPIKey: () => AdaptorMethodResponse<string>;
+	generateAPIKey: (metadata: Record<string, any>) => AdaptorMethodResponse<string>;
 
-	validateAPIKey: () => AdaptorMethodResponse<boolean>;
+	validateAPIKey: (key: string) => AdaptorMethodResponse<boolean>;
 }
