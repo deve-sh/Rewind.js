@@ -16,7 +16,7 @@ export type Chunk =
 	| { event: "scaffolding"; html: string }
 	| { event: "mutation"; metadata: any };
 
-type AdaptorMethodResponse<T> = { error: Error | unknown; result: T };
+type AdaptorMethodResponse<T> = Promise<{ error: Error | unknown; result: T }>;
 
 export interface DBAdaptor {
 	getSessions: (filters: Record<string, any>) => AdaptorMethodResponse<{
@@ -32,4 +32,13 @@ export interface DBAdaptor {
 	getSessionChunks: (
 		time: [string, string]
 	) => AdaptorMethodResponse<{ chunks: Chunk[] }>;
+
+	ingestSessionChunks: (
+		events: any[],
+		sessionId: string
+	) => AdaptorMethodResponse<boolean>;
+
+	generateAPIKey: () => AdaptorMethodResponse<string>;
+
+	validateAPIKey: () => AdaptorMethodResponse<boolean>;
 }

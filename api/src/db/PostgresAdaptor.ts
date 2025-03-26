@@ -31,11 +31,18 @@ class PostgresAdaptor implements DBAdaptor {
 		result: { deleted: boolean };
 	} {}
 
+	// @ts-expect-error To be implemented
 	createSession(session: {
 		id: string;
 		user: { email?: string; uid?: string; name?: string };
 		// @ts-expect-error To be implemented
 	}): { error: Error | unknown; result: { id: string } } {}
+
+	// @ts-expect-error To be implemented
+	generateAPIKey() {}
+
+	// @ts-expect-error To be implemented
+	validateAPIKey() {}
 }
 
 export default PostgresAdaptor;
