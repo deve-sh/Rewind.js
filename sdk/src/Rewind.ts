@@ -63,9 +63,12 @@ class RewindJS {
 	private setupInitialHTML() {
 		const docClone = document.cloneNode(true) as Node & Document;
 
+		// Remove all <script> tags from the cloned document
 		docClone.querySelectorAll("script").forEach((el) => el.remove());
+
+		// Remove all elements from <head> except <link> and <style>
 		docClone
-			.querySelectorAll("head > *:not(link)")
+			.querySelectorAll("head > *:not(link):not(style)")
 			.forEach((el) => el.remove());
 
 		const initialScaffoldedHtml = `<!DOCTYPE html><html>${docClone.documentElement.innerHTML}</html>`;
@@ -100,18 +103,54 @@ class RewindJS {
 			};
 		}
 
-		const observer = new MutationObserver((mutations) => {
-			mutations.forEach((mutation) => pushToQueue(serializeMutation(mutation)));
+		const headObserver = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				// Filter mutations to only include <link> and <style> tag changes
+				if (
+					mutation.target instanceof HTMLLinkElement ||
+					mutation.target instanceof HTMLStyleElement ||
+					[...mutation.addedNodes].some(
+						(node) =>
+							node instanceof HTMLLinkElement ||
+							node instanceof HTMLStyleElement
+					) ||
+					[...mutation.removedNodes].some(
+						(node) =>
+							node instanceof HTMLLinkElement ||
+							node instanceof HTMLStyleElement
+					)
+				) {
+					pushToQueue(serializeMutation(mutation));
+				}
+			});
 		});
 
-		observer.observe(headTarget, {
+		headObserver.observe(headTarget, {
 			subtree: false,
 			childList: true,
 			attributes: true,
 			characterData: true,
 		});
 
-		observer.observe(bodyTarget, {
+		const bodyObserver = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				// Ignore mutations related to <script> tags
+				if (
+					mutation.target instanceof HTMLScriptElement ||
+					[...mutation.addedNodes].some(
+						(node) => node instanceof HTMLScriptElement
+					) ||
+					[...mutation.removedNodes].some(
+						(node) => node instanceof HTMLScriptElement
+					)
+				)
+					return;
+
+				pushToQueue(serializeMutation(mutation));
+			});
+		});
+
+		bodyObserver.observe(bodyTarget, {
 			childList: true,
 			subtree: true,
 			attributes: true,
@@ -169,7 +208,8 @@ class RewindJS {
 		document.addEventListener("input", inputsEventListener);
 
 		this.intervals.push(window.setInterval(this.flushEventsToServer, 3500));
-		this.mutationObservers.push(observer);
+		this.mutationObservers.push(headObserver);
+		this.mutationObservers.push(bodyObserver);
 		this.eventListeners.push({ event: "input", listener: inputsEventListener });
 		this.eventListeners.push({ event: "click", listener: onMouseClick });
 		this.eventListeners.push({ event: "mousemove", listener: onMouseMove });
