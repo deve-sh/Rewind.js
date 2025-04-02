@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Rewind.js - Session Replay Sample</title>
+		<style>
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: Arial, sans-serif;
+				margin: 0;
+				padding: 0;
+				position: relative;
+			}
+			iframe {
+				width: 100vw;
+				height: 90vh;
+				border: 1px solid #000;
+				outline: none;
+				margin-top: 0.75rem;
+			}
+
+			#replay-cursor {
+				position: absolute;
+				width: 10px;
+				height: 10px;
+				background: red;
+				border-radius: 50%;
+				pointer-events: none;
+				z-index: 9999;
+			}
+		</style>
+	</head>
+	<body>
+		<button onclick="replayEvents(window.events)">Play Replay</button>
+
+		<div id="replay-cursor"></div>
+		<iframe id="replay-iframe"></iframe>
+
+		<script type="text/javascript">
+			const iframe = document.getElementById("replay-iframe");
+			const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+			const cursor = document.getElementById("replay-cursor");
+
+			function replayEvents(events) {
+				if (!events || !events.length) {
+					window.alert(
+						"No events set. Assign an array to window.events in the console."
+					);
+					return;
+				}
+
+				if (!iframeDoc) {
+					window.alert("Iframe not loaded. Click 'Load Replay' first.");
+					return;
+				}
+
+				const startTime = events[0].timestamp;
+
+				events.forEach((event, index) => {
+					const delay = event.timestamp - startTime;
+
+					setTimeout(() => {
+						if (event.type === "scaffolding") applyScaffolding(event.html);
+						if (event.type === "mousemove") moveCursor(event);
+						if (event.type === "mutation") applyMutation(event);
+
+						if (index === events.length - 1) {
+							console.log("Replay finished.");
+						}
+					}, delay);
+				});
+			}
+
+			function applyScaffolding(html) {
+				iframeDoc.open();
+
+				iframeDoc.write(html);
+
+				iframeDoc.close();
+			}
+
+			function moveCursor(event) {
+				cursor.style.transform = `translate(${event.x}px, ${event.y}px)`;
+			}
+
+			function applyMutation(event) {
+				const target = iframeDoc.querySelector(event.target);
+
+				if (!target) return;
+
+				if (event.subType === "attributes")
+					target.setAttribute(event.attributeName, event.newValue);
+				else if (event.subType === "characterData")
+					target.textContent = event.newValue;
+			}
+
+			// Sample event data (set your own in the console)
+			window.events = [];
+		</script>
+	</body>
+</html>
