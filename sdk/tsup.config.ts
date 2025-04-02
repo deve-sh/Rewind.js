@@ -7,7 +7,5 @@ export default defineConfig((options) => ({
 	sourcemap: false,
 	clean: true,
 	minify: !options.watch,
-	env: dotenv.config().parsed || {
-		SERVER_BASE_URL: "",
-	},
+	env: { SERVER_BASE_URL: "", ...dotenv.config().parsed },
 }));
