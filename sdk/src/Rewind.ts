@@ -34,10 +34,20 @@ class RewindJS {
 
 		if (initOptions.baseURL) this.baseURL = initOptions.baseURL;
 		if (initOptions.apiKey) this.apiKey = initOptions.apiKey;
+
+		this.setUserProperties = this.setUserProperties.bind(this);
+		this.startRecording = this.startRecording.bind(this);
+		this.pauseRecording = this.pauseRecording.bind(this);
+		this.setupInitialHTML = this.setupInitialHTML.bind(this);
+		this.listenToDOMMutationsAndInputs =
+			this.listenToDOMMutationsAndInputs.bind(this);
+		this.unregisterListeners = this.unregisterListeners.bind(this);
+		this.flushEventsToServer = this.flushEventsToServer.bind(this);
 	}
 
 	public setUserProperties(properties: (typeof this)["userProperties"]) {
-		if (!properties) return (this.userProperties = { uid: new Date().getTime().toString() });
+		if (!properties)
+			return (this.userProperties = { uid: new Date().getTime().toString() });
 
 		if (!properties.email && !properties.name && !properties.uid)
 			throw new Error(
@@ -217,6 +227,8 @@ class RewindJS {
 		if (this.mutationObservers.length)
 			this.mutationObservers.forEach((observer) => observer.disconnect());
 
+		this.mutationObservers = [];
+
 		if (this.eventListeners.length)
 			this.eventListeners.forEach((listenerRegistration) =>
 				document.removeEventListener(
@@ -225,8 +237,12 @@ class RewindJS {
 				)
 			);
 
+		this.eventListeners = [];
+
 		if (this.intervals)
 			this.intervals.forEach((interval) => window.clearInterval(interval));
+
+		this.intervals = [];
 	}
 
 	private async flushEventsToServer() {
