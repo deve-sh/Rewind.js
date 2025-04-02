@@ -1,12 +1,10 @@
-import { v4 as uuid } from "uuid";
-
 const sessionIdKey = "[rewind.js]session-id";
 
 const isSessionStorageAvailable = () => typeof sessionStorage !== "undefined";
 const isLocalStorageAvailable = () => typeof localStorage !== "undefined";
 
 const setSessionId = () => {
-	const id = uuid();
+	const id = new Date().getTime().toString();
 
 	if (isSessionStorageAvailable()) sessionStorage.setItem(sessionIdKey, id);
 	else if (isLocalStorageAvailable()) localStorage.setItem(sessionIdKey, id);

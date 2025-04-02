@@ -1,5 +1,3 @@
-import { v4 } from "uuid";
-
 import { getSessionId } from "./utils/session";
 
 import { getQueue, pushToQueue } from "./utils/events-queue";
@@ -39,7 +37,7 @@ class RewindJS {
 	}
 
 	public setUserProperties(properties: (typeof this)["userProperties"]) {
-		if (!properties) return (this.userProperties = { uid: v4() });
+		if (!properties) return (this.userProperties = { uid: new Date().getTime().toString() });
 
 		if (!properties.email && !properties.name && !properties.uid)
 			throw new Error(

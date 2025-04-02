@@ -4,7 +4,7 @@
 	"description": "Rewind your user sessions to understand their workflows better",
 	"main": "index.js",
 	"scripts": {
-		"compile": "tsup",
+		"compile": "tsup --format iife --global-name Rewind",
 		"test": "vitest"
 	},
 	"keywords": [
@@ -19,7 +19,5 @@
 		"typescript": "^5.8.2",
 		"vitest": "^3.0.9"
 	},
-	"dependencies": {
-		"uuid": "^11.1.0"
-	}
+	"dependencies": {}
 }
