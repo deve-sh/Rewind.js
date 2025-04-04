@@ -260,13 +260,20 @@ class RewindJS {
 			"content-type": "application/json",
 		};
 
-		const { error } = await call(
-			this.baseURL + "/track",
-			constructedRequestBody,
-			headers
-		);
+		try {
+			const endpoint = new URL("/events/track", this.baseURL).toString();
 
-		if (error) this.canSendMoreAPICalls = false;
+			const { error: apiCallError } = await call(
+				endpoint,
+				constructedRequestBody,
+				headers
+			);
+
+			if (apiCallError) this.canSendMoreAPICalls = false;
+		} catch {
+			// Invalid Base URL or network issue
+			this.canSendMoreAPICalls = false;
+		}
 	}
 }
 
