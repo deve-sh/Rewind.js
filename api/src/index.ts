@@ -16,7 +16,7 @@ import eventsRoutes from "./routers/events";
 import sessionsRoutes from "./routers/sessions";
 
 fastify.register(sessionsRoutes, { prefix: "/sessions" });
-fastify.register(eventsRoutes, { prefix: "/routes" });
+fastify.register(eventsRoutes, { prefix: "/events" });
 
 fastify
 	.listen({ port: PORT })
